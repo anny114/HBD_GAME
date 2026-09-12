@@ -671,13 +671,18 @@ window.addEventListener('keydown', startBgm, { once: true });
         });
 
         // 動畫繪製
-        if (Math.abs(player.vx) > 0.1 && player.isGrounded) {
+        if (Math.abs(player.vx) > 0.1) {
             player.animTimer++;
-            if (player.animTimer % 8 === 0) {
-                player.animFrame = (player.animFrame + 1) % walkImages.length;
+        
+            if (player.animTimer >= 8) {
+                player.animTimer = 0;
+                player.animFrame =
+                    (player.animFrame + 1) % walkImages.length;
             }
+        
             playerEl.src = walkImages[player.animFrame];
         } else {
+            player.animTimer = 0;
             player.animFrame = 0;
             playerEl.src = standImage;
         }
