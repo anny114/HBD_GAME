@@ -1,0 +1,711 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>祝師傅生日快樂</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+        }
+
+        body {
+            background-color: #212529;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            font-family: 'PingFang TC', 'Microsoft JhengHei', sans-serif;
+            overflow: hidden;
+        }
+
+        /* 遊戲視窗 */
+        #game-viewport {
+            position: relative;
+            width: 900px;
+            height: 500px;
+            background: linear-gradient(to bottom, #dbe5eb 0%, #edf2f5 60%, #c2d6de 100%);
+            border-radius: 16px;
+            box-shadow: 0 15px 30px rgba(0,0,0,0.4);
+            overflow: hidden;
+        }
+
+        /* 遊戲長地圖容器 */
+        #game-world {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 3200px; /* 加長地圖至 3200px */
+            height: 100%;
+        }
+
+        /* 雲朵 */
+        .cloud {
+            position: absolute;
+            background: rgba(255, 255, 255, 0.85);
+            border-radius: 50px;
+        }
+        .cloud::before, .cloud::after {
+            content: '';
+            position: absolute;
+            background: rgba(255, 255, 255, 0.85);
+            border-radius: 50%;
+        }
+        .cloud-1 { width: 120px; height: 40px; top: 40px; left: 100px; }
+        .cloud-1::before { width: 50px; height: 50px; top: -20px; left: 20px; }
+        .cloud-1::after { width: 40px; height: 40px; top: -15px; right: 20px; }
+
+        .cloud-2 { width: 160px; height: 50px; top: 60px; left: 600px; }
+        .cloud-2::before { width: 70px; height: 70px; top: -30px; left: 25px; }
+
+        .cloud-3 { width: 140px; height: 45px; top: 30px; left: 1200px; }
+        .cloud-3::before { width: 60px; height: 60px; top: -25px; left: 20px; }
+
+        .cloud-4 { width: 180px; height: 55px; top: 50px; left: 1850px; }
+        .cloud-4::before { width: 80px; height: 80px; top: -35px; left: 30px; }
+
+        .cloud-5 { width: 150px; height: 48px; top: 40px; left: 2500px; }
+        .cloud-5::before { width: 65px; height: 65px; top: -28px; left: 25px; }
+
+        /* 飄浮氣球 */
+        .balloon {
+            position: absolute;
+            width: 26px;
+            height: 32px;
+            border-radius: 50% 50% 50% 50% / 40% 40% 60% 60%;
+            animation: floatBalloon 3s infinite ease-in-out alternate;
+        }
+        .balloon::after {
+            content: '';
+            position: absolute;
+            bottom: -12px;
+            left: 12px;
+            width: 1px;
+            height: 14px;
+            background: #888;
+        }
+
+        .b-pink { background: #f8a5c2; }
+        .b-blue { background: #7ed6df; }
+        .b-yellow { background: #f9ca24; }
+        .b-purple { background: #e056fd; }
+
+        @keyframes floatBalloon {
+            0% { transform: translateY(0px) rotate(-3deg); }
+            100% { transform: translateY(-15px) rotate(3deg); }
+        }
+
+        /* UI 固定介面 */
+        .ui-controls {
+            position: absolute;
+            top: 15px;
+            left: 20px;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 8px 16px;
+            border-radius: 20px;
+            display: flex;
+            gap: 12px;
+            font-size: 12px;
+            color: #55606e;
+            font-weight: bold;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+            z-index: 50;
+        }
+        .key-badge {
+            background: #fff;
+            border: 1px solid #d0d7de;
+            border-radius: 6px;
+            padding: 2px 6px;
+            box-shadow: 0 2px 0 #cbd5e1;
+            margin-right: 4px;
+            display: inline-block;
+        }
+
+        .ui-task {
+            position: absolute;
+            top: 15px;
+            right: 20px;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 13px;
+            color: #4a5568;
+            font-weight: bold;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+            z-index: 50;
+        }
+
+        /* 地形平台 */
+        .platform {
+            position: absolute;
+            background: #c5d6a4;
+            border-top: 6px solid #a8be80;
+            border-radius: 12px 12px 0 0;
+            z-index: 5;
+        }
+        .platform::after {
+            content: '';
+            position: absolute;
+            bottom: -150px;
+            left: 0;
+            width: 100%;
+            height: 150px;
+            background: #e1d3b7;
+        }
+
+        /* 可推動木箱 Box */
+        .box {
+            position: absolute;
+            background: #d4a373;
+            border: 3px solid #bc6c25;
+            border-radius: 6px;
+            box-shadow: inset 0 0 5px rgba(0,0,0,0.15);
+            z-index: 10;
+            transition: transform 0.05s ease;
+        }
+
+        /* 障礙物：尖刺 */
+        .spike {
+            position: absolute;
+            width: 0;
+            height: 0;
+            border-left: 14px solid transparent;
+            border-right: 14px solid transparent;
+            border-bottom: 22px solid #e74c3c;
+            z-index: 6;
+        }
+
+        /* 終點旗子與禮物 */
+        .flag {
+            position: absolute;
+            left: 2920px;
+            bottom: 180px;
+            width: 4px;
+            height: 60px;
+            background: #78909c;
+            z-index: 5;
+        }
+        .flag::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 4px;
+            width: 24px;
+            height: 18px;
+            background: #64b5f6;
+            clip-path: polygon(0 0, 100% 50%, 0 100%);
+        }
+
+        .gift-box {
+            position: absolute;
+            left: 2980px;
+            bottom: 180px;
+            width: 34px;
+            height: 34px;
+            background: #fff3c4;
+            border: 2px solid #ffd54f;
+            border-radius: 6px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            animation: bounce 1.5s infinite ease-in-out;
+            z-index: 5;
+        }
+        .gift-box::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 14px;
+            width: 6px;
+            height: 100%;
+            background: #ff8a65;
+        }
+        .gift-box::after {
+            content: '';
+            position: absolute;
+            top: 14px;
+            left: 0;
+            width: 100%;
+            height: 6px;
+            background: #ff8a65;
+        }
+
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-6px); }
+        }
+
+        .f-prompt {
+            position: absolute;
+            left: 2960px;
+            bottom: 225px;
+            background: #fff;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: bold;
+            color: #455a64;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+            display: none;
+            z-index: 5;
+            animation: pulse 1s infinite alternate;
+        }
+        @keyframes pulse {
+            from { transform: scale(1); }
+            to { transform: scale(1.1); }
+        }
+
+        /* 玩家角色 */
+        #player {
+            position: absolute;
+            width: 55px;
+            height: 65px;
+            left: 50px;
+            top: 215px;
+            z-index: 20;
+            object-fit: contain;
+            mix-blend-mode: multiply;
+        }
+
+        /* 彈出視窗 Modal */
+        .modal-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(3px);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+        }
+
+        .modal-card {
+            background: #ffffff;
+            width: 320px;
+            padding: 24px;
+            border-radius: 20px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            position: relative;
+            animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        @keyframes popIn {
+            from { opacity: 0; transform: scale(0.8); }
+            to { opacity: 1; transform: scale(1); }
+        }
+
+        .modal-close {
+            position: absolute;
+            top: 12px;
+            right: 15px;
+            font-size: 20px;
+            color: #a0aec0;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        .modal-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .avatar {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            border: 2px solid #e2e8f0;
+            object-fit: cover;
+        }
+
+        .modal-title {
+            font-size: 16px;
+            font-weight: bold;
+            color: #2d3748;
+        }
+
+        .audio-player {
+            width: 100%;
+            margin-top: 5px;
+            border-radius: 8px;
+        }
+    </style>
+</head>
+<body>
+
+<audio id="bgm" loop>
+    <source src="背景音樂.mp3" type="audio/mp3">
+</audio>
+<div id="game-viewport">
+    <!-- 固定 UI -->
+    <div class="ui-controls">
+        <span><span class="key-badge">A</span>/<span class="key-badge">D</span>移動</span>
+        <span><span class="key-badge">Space</span>跳躍</span>
+        <span><span class="key-badge">S</span>變扁裝可愛</span>
+    </div>
+    <div class="ui-task">🚩 跨越障礙到達終點！</div>
+
+    <!-- 長地圖世界 -->
+    <div id="game-world">
+        <!-- 雲朵 -->
+        <div class="cloud cloud-1"></div>
+        <div class="cloud cloud-2"></div>
+        <div class="cloud cloud-3"></div>
+        <div class="cloud cloud-4"></div>
+        <div class="cloud cloud-5"></div>
+
+        <!-- 氣球 -->
+        <div class="balloon b-pink" style="left: 120px; top: 120px;"></div>
+        <div class="balloon b-blue" style="left: 180px; top: 90px;"></div>
+        <div class="balloon b-yellow" style="left: 700px; top: 100px;"></div>
+        <div class="balloon b-purple" style="left: 1300px; top: 80px;"></div>
+        <div class="balloon b-pink" style="left: 1850px; top: 120px;"></div>
+        <div class="balloon b-blue" style="left: 2400px; top: 100px;"></div>
+
+        <!-- 地形 Platforms (x, y, w, h) -->
+        <div class="platform" style="left: 0px; bottom: 0px; width: 500px; height: 160px;"></div>
+        <div class="platform" style="left: 580px; bottom: 0px; width: 450px; height: 180px;"></div>
+        <div class="platform" style="left: 1100px; bottom: 0px; width: 400px; height: 220px;"></div>
+        <div class="platform" style="left: 1580px; bottom: 0px; width: 350px; height: 160px;"></div>
+        <div class="platform" style="left: 2000px; bottom: 0px; width: 450px; height: 200px;"></div>
+        <div class="platform" style="left: 2520px; bottom: 0px; width: 680px; height: 180px;"></div>
+
+        <!-- 路面障礙物：地底尖刺 Spikes (需要推箱子壓住才能安全通過) -->
+        <div class="spike" style="left: 320px; bottom: 160px;"></div>
+        <div class="spike" style="left: 348px; bottom: 160px;"></div>
+
+        <div class="spike" style="left: 780px; bottom: 180px;"></div>
+        <div class="spike" style="left: 808px; bottom: 180px;"></div>
+
+        <div class="spike" style="left: 1300px; bottom: 220px;"></div>
+
+        <div class="spike" style="left: 2200px; bottom: 200px;"></div>
+        <div class="spike" style="left: 2228px; bottom: 200px;"></div>
+
+        <!-- 終點旗子與禮物 -->
+        <div class="flag"></div>
+        <div class="gift-box" id="gift"></div>
+        <div class="f-prompt" id="fPrompt"><span class="key-badge">F</span> 開啟</div>
+
+        <!-- 玩家角色 -->
+        <img id="player" src="stand.png" alt="Player">
+    </div>
+
+    <!-- 彈出視窗 Modal -->
+    <div class="modal-overlay" id="modal">
+        <div class="modal-card">
+            <span class="modal-close" id="closeBtn">&times;</span>
+            <div class="modal-header">
+                <img class="avatar" src="stand.png" alt="Avatar">
+                <div>
+                    <div class="modal-title">⭐ 後天生日快樂!🎉 ⭐</div>
+                    <div style="font-size: 13px; color: #718096;">但我還沒想到要送什麼QAQ</div>
+                </div>
+            </div>
+            <audio id="audio" class="audio-player" controls>
+                <source src="生日快樂歌.m4a" type="audio/mp4">
+            </audio>
+        </div>
+    </div>
+</div>
+
+<script>
+    const gameWorld = document.getElementById('game-world');
+    const playerEl = document.getElementById('player');
+    const fPrompt = document.getElementById('fPrompt');
+    const modal = document.getElementById('modal');
+    const closeBtn = document.getElementById('closeBtn');
+    const audio = document.getElementById('audio');
+    const bgm = document.getElementById('bgm');
+
+    // 圖片設定
+    const standImage = 'stand.png';
+    const walkImages = ['walk1.png', 'walk2.png', 'walk3.png', 'walk4.png'];
+
+    // 玩家狀態
+    let player = {
+        x: 50,
+        y: 200,
+        width: 45,
+        height: 65,
+        vx: 0,
+        vy: 0,
+        speed: 4,
+        gravity: 0.5,
+        jumpPower: -10.5,
+        isGrounded: false,
+        isCrouching: false,
+        facingRight: true,
+        animFrame: 0,
+        animTimer: 0
+    };
+
+    const keys = { a: false, d: false, space: false, s: false };
+
+// 瀏覽器通常禁止沒有使用者互動的自動播放。
+// 玩家第一次按鍵後啟動背景音樂。
+let bgmStarted = false;
+function startBgm() {
+    if (bgmStarted) return;
+    bgmStarted = true;
+    bgm.volume = 0.45;
+    bgm.play().catch(() => {
+        bgmStarted = false;
+    });
+}
+
+window.addEventListener('keydown', startBgm, { once: true });
+
+    // 靜態平台列表
+    const platforms = [
+        { x: 0, y: 340, w: 500, h: 160 },
+        { x: 580, y: 320, w: 450, h: 180 },
+        { x: 1100, y: 280, w: 400, h: 220 },
+        { x: 1580, y: 340, w: 350, h: 160 },
+        { x: 2000, y: 300, w: 450, h: 200 },
+        { x: 2520, y: 320, w: 680, h: 180 }
+    ];
+
+    // 動態可推動木箱列表
+    const boxes = [
+        { id: 'b1', x: 220, y: 295, w: 45, h: 45, el: null },
+        { id: 'b2', x: 680, y: 275, w: 45, h: 45, el: null },
+        { id: 'b3', x: 1200, y: 235, w: 45, h: 45, el: null },
+        { id: 'b4', x: 2100, y: 255, w: 45, h: 45, el: null }
+    ];
+
+    // 初始化動態生成木箱 DOM
+    boxes.forEach(box => {
+        const div = document.createElement('div');
+        div.className = 'box';
+        div.style.width = box.w + 'px';
+        div.style.height = box.h + 'px';
+        div.style.left = box.x + 'px';
+        div.style.top = box.y + 'px';
+        gameWorld.appendChild(div);
+        box.el = div;
+    });
+
+    // 傷害性尖刺碰撞 (28px x 22px)
+    const hazardObjects = [
+        { x: 320, y: 318, w: 28, h: 22 },
+        { x: 348, y: 318, w: 28, h: 22 },
+        { x: 780, y: 298, w: 28, h: 22 },
+        { x: 808, y: 298, w: 28, h: 22 },
+        { x: 1300, y: 258, w: 28, h: 22 },
+        { x: 2200, y: 278, w: 28, h: 22 },
+        { x: 2228, y: 278, w: 28, h: 22 }
+    ];
+
+    // 按鍵事件
+    window.addEventListener('keydown', (e) => {
+        const k = e.key.toLowerCase();
+        if (k === 'a') keys.a = true;
+        if (k === 'd') keys.d = true;
+        if (e.code === 'Space' || k === ' ') {
+            keys.space = true;
+            e.preventDefault();
+        }
+        if (k === 's') keys.s = true;
+        if (k === 'f' && isNearGift()) openModal();
+    });
+
+    window.addEventListener('keyup', (e) => {
+        const k = e.key.toLowerCase();
+        if (k === 'a') keys.a = false;
+        if (k === 'd') keys.d = false;
+        if (e.code === 'Space' || k === ' ') keys.space = false;
+        if (k === 's') keys.s = false;
+    });
+
+    closeBtn.addEventListener('click', closeModal);
+
+    function isNearGift() {
+        return player.x >= 2880;
+    }
+
+    function openModal() {
+        modal.style.display = 'flex';
+
+        // 開啟禮物時先暫停背景音樂
+        bgm.pause();
+
+        // 播放禮物／祝福音訊
+        audio.currentTime = 0;
+        audio.play().catch(() => {});
+    }
+
+    function closeModal() {
+        modal.style.display = 'none';
+        audio.pause();
+        audio.currentTime = 0;
+
+        // 關閉祝福視窗後恢復背景音樂
+        if (bgmStarted) {
+            bgm.play().catch(() => {});
+        }
+    }
+
+    function resetPlayer() {
+        player.x = 50;
+        player.y = 200;
+        player.vx = 0;
+        player.vy = 0;
+    }
+
+    // AABB 碰撞檢測
+    function isColliding(r1, r2) {
+        return (
+            r1.x < r2.x + r2.w &&
+            r1.x + r1.w > r2.x &&
+            r1.y < r2.y + r2.h &&
+            r1.y + r1.h > r2.y
+        );
+    }
+
+    // 遊戲主循環
+    function gameLoop() {
+        // 水平移動
+        if (keys.a) {
+            player.vx = -player.speed;
+            player.facingRight = false;
+        } else if (keys.d) {
+            player.vx = player.speed;
+            player.facingRight = true;
+        } else {
+            player.vx = 0;
+        }
+
+        player.x += player.vx;
+
+        // 合併靜態平台與木箱作爲障礙物
+        let playerRectX = { x: player.x, y: player.y, w: player.width, h: player.height };
+
+        // 1. 玩家與平台 X 碰撞
+        platforms.forEach(plat => {
+            if (isColliding(playerRectX, plat)) {
+                if (player.vx > 0) player.x = plat.x - player.width;
+                else if (player.vx < 0) player.x = plat.x + plat.w;
+            }
+        });
+
+        // 2. 玩家與木箱 X 碰撞 + **推箱子機制**
+        boxes.forEach(box => {
+            if (isColliding(playerRectX, box)) {
+                if (player.vx > 0) { // 向右推
+                    let newBoxX = box.x + player.speed * 0.8;
+                    box.x = newBoxX;
+                    player.x = box.x - player.width;
+                } else if (player.vx < 0) { // 向左推
+                    let newBoxX = box.x - player.speed * 0.8;
+                    box.x = newBoxX;
+                    player.x = box.x + box.w;
+                }
+                box.el.style.left = box.x + 'px';
+            }
+        });
+
+        // 跳躍與重力 Y
+        if (keys.space && player.isGrounded) {
+            player.vy = player.jumpPower;
+            player.isGrounded = false;
+        }
+
+        player.isCrouching = keys.s;
+        player.vy += player.gravity;
+        player.y += player.vy;
+
+        player.isGrounded = false;
+        let playerRectY = { x: player.x, y: player.y, w: player.width, h: player.height };
+
+        // 玩家踩在平台上
+        platforms.forEach(plat => {
+            if (isColliding(playerRectY, plat)) {
+                if (player.vy > 0) {
+                    player.y = plat.y - player.height;
+                    player.vy = 0;
+                    player.isGrounded = true;
+                } else if (player.vy < 0) {
+                    player.y = plat.y + plat.h;
+                    player.vy = 0;
+                }
+            }
+        });
+
+        // 玩家踩在木箱上
+        boxes.forEach(box => {
+            if (isColliding(playerRectY, box)) {
+                if (player.vy > 0) {
+                    player.y = box.y - player.height;
+                    player.vy = 0;
+                    player.isGrounded = true;
+                } else if (player.vy < 0) {
+                    player.y = box.y + box.h;
+                    player.vy = 0;
+                }
+            }
+        });
+
+        // 邊界控制
+        if (player.x < 0) player.x = 0;
+        if (player.x > 3140) player.x = 3140;
+
+        // 跌落谷底重生
+        if (player.y > 520) resetPlayer();
+
+        // 尖刺傷害判定（若尖刺被木箱蓋住，則不造成傷害）
+        hazardObjects.forEach(hz => {
+            let isCoveredByBox = boxes.some(box => isColliding(box, hz));
+            if (!isCoveredByBox) {
+                if (isColliding({ x: player.x, y: player.y, w: player.width, h: player.height }, hz)) {
+                    resetPlayer();
+                }
+            }
+        });
+
+        // 動畫繪製
+        if (Math.abs(player.vx) > 0.1 && player.isGrounded) {
+            player.animTimer++;
+            if (player.animTimer % 8 === 0) {
+                player.animFrame = (player.animFrame + 1) % walkImages.length;
+            }
+            playerEl.src = walkImages[player.animFrame];
+        } else {
+            player.animFrame = 0;
+            playerEl.src = standImage;
+        }
+
+        const scaleX = player.facingRight ? 1 : -1;
+        const scaleY = player.isCrouching ? 0.75 : 1;
+        playerEl.style.transform = `scale(${scaleX}, ${scaleY})`;
+
+        playerEl.style.left = player.x + 'px';
+        playerEl.style.top = player.y + 'px';
+
+        // 🎥 鏡頭跟隨 (平滑跟隨)
+        let cameraX = player.x - 400;
+        if (cameraX < 0) cameraX = 0;
+        if (cameraX > 3200 - 900) cameraX = 3200 - 900;
+        gameWorld.style.transform = `translateX(${-cameraX}px)`;
+
+        // F 鍵提示
+        if (isNearGift()) {
+            fPrompt.style.display = 'block';
+        } else {
+            fPrompt.style.display = 'none';
+        }
+
+        requestAnimationFrame(gameLoop);
+    }
+
+    gameLoop();
+</script>
+</body>
+</html>
