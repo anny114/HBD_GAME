@@ -426,8 +426,21 @@
     const bgm = document.getElementById('bgm');
 
     // 圖片設定
-    const standImage = 'stand.png';
-    const walkImages = ['walk1.png', 'walk2.png', 'walk3.png', 'walk4.png'];
+    // 加版本號避免 GitHub Pages / 瀏覽器快取舊圖片
+    const imageVersion = '?v=2';
+    const standImage = 'stand.png' + imageVersion;
+    const walkImages = [
+        'walk1.png' + imageVersion,
+        'walk2.png' + imageVersion,
+        'walk3.png' + imageVersion,
+        'walk4.png' + imageVersion
+    ];
+
+    // 預先載入四張走路圖
+    walkImages.forEach(src => {
+        const img = new Image();
+        img.src = src;
+    });
 
     // 玩家狀態
     let player = {
@@ -670,18 +683,19 @@ window.addEventListener('keydown', startBgm, { once: true });
             }
         });
 
-        // 動畫繪製
-        if (Math.abs(player.vx) > 0.1) {
+        // ===== 走路動畫 =====
+        // 只要 A / D 正在移動，就播放 walk1 → walk2 → walk3 → walk4
+        if (keys.a || keys.d) {
             player.animTimer++;
-        
-            if (player.animTimer >= 8) {
+
+            if (player.animTimer >= 6) {
                 player.animTimer = 0;
-                player.animFrame =
-                    (player.animFrame + 1) % walkImages.length;
+                player.animFrame = (player.animFrame + 1) % walkImages.length;
             }
-        
+
             playerEl.src = walkImages[player.animFrame];
         } else {
+            // 沒有移動時回到站立圖
             player.animTimer = 0;
             player.animFrame = 0;
             playerEl.src = standImage;
